@@ -32,6 +32,8 @@ This module contains unit test for the converter module.
 """
 
 
+from openbabel import openbabel
+
 from rmgpy.molecule.converter import (
     debug_rdkit_mol,
     to_rdkit_mol,
@@ -183,3 +185,27 @@ class ConverterTest:
             new_mol = from_ob_mol(Molecule(), ob_mol)
             assert mol.is_isomorphic(new_mol) or self.test_Hbond_free_mol.is_isomorphic(new_mol)
             assert mol.get_element_count() == new_mol.get_element_count()
+
+    def test_ob_mol_van_der_waals_bidentate(self):
+        """Test that to_ob_mol handles a van der Waals (order 0) bond without raising.
+
+        Regression test for a KeyError: 0.0 crash in to_ob_mol's bond-order
+        table, hit when a bidentate adsorbate has one covalent and one van der
+        Waals surface bond. Same underlying limitation (vdW bonds newly
+        producible by bidentate surface families) as issue #2987, but in the
+        OpenBabel SMILES-conversion path rather than the binding-energy
+        correction path fixed by PR #2988.
+        """
+        mol = Molecule().from_adjacency_list(
+            """
+1 X u0 p0 c0 {2,vdW}
+2 O u0 p2 c0 {1,vdW} {3,D}
+3 C u0 p0 c0 {2,D} {4,S} {5,S}
+4 O u0 p2 c0 {3,S} {6,S}
+5 H u0 p0 c0 {3,S}
+6 X u0 p0 c0 {4,S}
+"""
+        )
+        ob_mol = to_ob_mol(mol)  # should not raise KeyError: 0.0
+        bond_orders = sorted(bond.GetBondOrder() for bond in openbabel.OBMolBondIter(ob_mol))
+        assert bond_orders == [0, 1, 1, 1, 2]  # vdW (0), 3 singles (C-H, C-O, O-X), 1 C=O double

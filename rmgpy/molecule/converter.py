@@ -272,7 +272,7 @@ def to_ob_mol(mol, return_mapping=False, save_order=False):
         a.SetFormalCharge(atom.charge)
         # a.SetImplicitHCount(0) # the default is 0
         ob_atom_ids[atom] = a.GetId()
-    orders = {1: 1, 2: 2, 3: 3, 4: 4, 1.5: 5}
+    orders = {0: 0, 1: 1, 2: 2, 3: 3, 4: 4, 1.5: 5}  # 0 = van der Waals / zero-order bond
     for atom1 in mol.vertices:
         for atom2, bond in atom1.edges.items():
             if bond.is_hydrogen_bond():
